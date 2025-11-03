@@ -1,6 +1,7 @@
 import { Heebo, Roboto } from "next/font/google";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Providers } from "@/redux/Providers";
+import { LayoutProvider } from '@/context/useLayoutContext';
 import { ToastContainer } from "react-toastify";
 
 const heebo = Heebo({
@@ -24,10 +25,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${heebo.variable} ${roboto.variable}`}>
-        <Providers>
-          {children}
-          <ToastContainer position="top-right" autoClose={3000} />
-        </Providers>
+        <LayoutProvider>
+          <Providers>
+            {children}
+            <ToastContainer position="top-right" autoClose={3000} />
+          </Providers>
+        </LayoutProvider>
       </body>
     </html>
   );

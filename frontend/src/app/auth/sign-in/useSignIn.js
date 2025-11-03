@@ -35,7 +35,7 @@ export default function useSignIn() {
         }
 
         toast.success("Login successful!");
-        router.push("/");
+        router.push("/admin/dashboard");
       } else {
         toast.error(response.data.message || "Invalid credentials");
       }
