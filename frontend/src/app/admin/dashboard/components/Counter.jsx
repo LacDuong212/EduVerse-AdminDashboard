@@ -1,37 +1,71 @@
-'use client';
+"use client"; // Bắt buộc nếu dùng App Router
 
-import { adminCounterData } from '@/assets/data/products';
+import React, { useState, useEffect } from 'react';
 import { Card, Col, Row } from 'react-bootstrap';
 import CountUp from 'react-countup';
+import axios from 'axios';
+import { FaUserGraduate, FaUserTie, FaBook } from 'react-icons/fa';
+import { TbCurrencyDong } from 'react-icons/tb';
 
-const CounterCard = ({ count, title, icon: Icon, suffix, variant }) => {
-  return (
-    <Card className={`card-body bg-${variant} bg-opacity-15 p-4 h-100`}>
-      <div className="d-flex justify-content-between align-items-center">
-        <div>
-          <h2 className="purecounter mb-0 fw-bold">
-            <CountUp end={count} suffix={suffix} delay={1} />
-          </h2>
-          <span className="mb-0 h6 fw-light">{title}</span>
-        </div>
-        <div className={`icon-lg rounded-circle bg-${variant} text-white mb-0`}>
-          {Icon && <Icon />}
-        </div>
+// CounterCard component (không thay đổi)
+const CounterCard = ({ count, title, icon: Icon, variant }) => {
+  return <Card className={`card-body bg-${variant} bg-opacity-15 p-4 h-100`}>
+    <div className="d-flex justify-content-between align-items-center">
+      <div>
+        <h2 className="purecounter mb-0 fw-bold">
+          <CountUp end={count} suffix={undefined} delay={0.5} duration={2} /> 
+          {/* Sửa nhỏ: suffix nên được truyền riêng nếu có, ví dụ cho Total Sales */}
+        </h2>
+        <span className="mb-0 h6 fw-light">{title}</span>
       </div>
-    </Card>
-  );
+      <div className={`icon-lg rounded-circle bg-${variant} text-white mb-0`}>{Icon && <Icon />}</div>
+    </div>
+  </Card>;
 };
 
 const Counter = () => {
-  return (
-    <Row className="g-4 mb-4">
-      {adminCounterData.map((item, idx) => (
-        <Col md={6} xxl={3} key={idx}>
-          <CounterCard {...item} />
-        </Col>
-      ))}
-    </Row>
-  );
+  // THAY ĐỔI BIẾN MÔI TRƯỜNG
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const [counterData, setCounterData] = useState([]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem('adminToken'); // localStorage vẫn hoạt động
+        const config = {
+          headers: { Authorization: `Bearer ${token}` }
+        };
+
+        const { data } = await axios.get(`${backendUrl}/api/admin/dashboard-stats`, config);
+
+        if (data.success) {
+          const stats = data.data;
+
+          const formattedData = [
+            { title: "Total Students", count: stats.totalStudents, icon: FaUserGraduate, variant: "primary" },
+            { title: "Total Instructors", count: stats.totalInstructors, icon: FaUserTie, variant: "purple" },
+            { title: "Total Courses", count: stats.totalCourses, icon: FaBook, variant: "info" },
+            { title: "Total Sales", count: stats.totalSales, icon: TbCurrencyDong, variant: "success" }
+          ];
+          setCounterData(formattedData);
+        }
+      } catch (error) {
+        console.error("Failed to fetch dashboard stats:", error);
+      }
+    };
+
+    fetchStats();
+  }, [backendUrl]); // Thêm backendUrl vào dependency array
+
+  if (counterData.length === 0) {
+    return null; // Hoặc một bộ xương (skeleton) loading
+  }
+
+  return <Row className="g-4 mb-4">
+    {counterData.map((item, idx) => <Col md={6} xxl={3} key={idx}>
+      <CounterCard {...item} />
+    </Col>)}
+  </Row>;
 };
 
 export default Counter;

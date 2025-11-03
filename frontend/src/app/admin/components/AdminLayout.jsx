@@ -30,8 +30,8 @@ const AdminLayout = ({ children }) => {
             <>
               <AppMenu />
               <div className="mt-auto px-3 py-3 d-flex justify-content-between text-primary-hover">
-                <Link href="/admin/admin-settings"><BsGearFill /></Link>
-                <Link href="/"><BsGlobe /></Link>
+                <Link href="/admin/dashboard"><BsGearFill /></Link>
+                <Link href="/admin/dashboard"><BsGlobe /></Link>
                 <Link href="/auth/sign-in"><BsPower /></Link>
               </div>
             </>
@@ -40,8 +40,8 @@ const AdminLayout = ({ children }) => {
               <Offcanvas.Body className="d-flex flex-column bg-dark">
                 <AppMenu />
                 <div className="mt-auto px-3 py-3 d-flex justify-content-between text-primary-hover">
-                  <Link href="/admin/admin-settings"><BsGearFill /></Link>
-                  <Link href="/"><BsGlobe /></Link>
+                  <Link href="/admin/dashboard"><BsGearFill /></Link>
+                  <Link href="/admin/dashboard"><BsGlobe /></Link>
                   <Link href="/auth/sign-in"><BsPower /></Link>
                 </div>
               </Offcanvas.Body>

@@ -23,11 +23,6 @@ export const ADMIN_MENU_ITEMS = [{
   icon: FaUserTie,
   url: '/admin/instructors'
 }, {
-  key: 'admins',
-  label: 'Admins',
-  icon: FaUserTie,
-  url: '/admin/admins'
-}, {
   key: 'earnings',
   label: 'Earnings',
   icon: FaChartBar,

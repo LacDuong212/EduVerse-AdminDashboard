@@ -1,9 +1,15 @@
-import { billingHistoryData } from '@/assets/data/products';
+"use client"; // 1. Thêm "use client" vì có dùng hooks và localStorage
+
+import React, { useState, useEffect, useCallback } from 'react'; // Thêm useCallback
+import PageMetaData from '@/components/PageMetaData';
 import { Card, CardBody, CardHeader, Col, Row, Table } from 'react-bootstrap';
 import { BsInfoCircleFill } from 'react-icons/bs';
 import { FaAngleLeft, FaAngleRight } from 'react-icons/fa';
-import { earningsData } from './data';
+import CountUp from 'react-countup';
+import axios from 'axios';
 import AdminLayout from '../components/AdminLayout';
+
+
 const EarningsFastCard = ({
   amount,
   title,
@@ -18,56 +24,121 @@ const EarningsFastCard = ({
           <BsInfoCircleFill className="small" />
         </a>}
       </h6>
-      <h2 className={`mb-0 fs-1 text-${variant}`}>${amount}</h2>
+      <h2 className={`mb-0 fs-1 text-${variant}`}>
+        <CountUp
+          end={amount}
+          duration={1.5}
+        />
+      </h2>
     </div>
   </Col>;
 };
+
 const InvoiceHistoryCard = ({
   name,
   paymentMethod,
   date,
   amount,
   status,
-  id
+  _id
 }) => {
   return <tr>
-    <td>{id}</td>
     <td>
       <h6 className="table-responsive-title mb-0">
         <a href="#">{name}</a>
       </h6>
     </td>
-    <td>{date.toLocaleString('en-US', {
+    <td>{new Date(date).toLocaleString('en-US', {
       month: 'short',
       day: '2-digit',
       year: 'numeric'
     })}</td>
     <td>
-      <span className="text-capitalize">
-        {paymentMethod.name || paymentMethod.type}
-      </span>
+      {/* 3. Đảm bảo đường dẫn ảnh trong public/ hoặc dùng next/image */}
+      <img src={paymentMethod.image} className={` ${paymentMethod.type === 'vnpay' ? 'h-30px' : 'h-40px'}`} height={paymentMethod.type === 'momo' ? 30 : 40} alt="paymentMethodImg" />
     </td>
     <td>
-      <span className="fw-semibold text-success">${amount}</span>
+      ₫{amount}&nbsp;
     </td>
     <td>
-      <div className={`badge bg-${status === 'paid' ? 'success' : status === 'pending' ? 'warning' : 'danger'} bg-opacity-10 text-${status === 'paid' ? 'success' : status === 'pending' ? 'warning' : 'danger'}`}>
+      <div className={`badge bg-${status === 'completed' ? 'success' : status === 'pending' ? 'orange' : 'danger'} bg-opacity-10 text-${status === 'completed' ? 'success' : status === 'pending' ? 'orange' : 'danger'}`}>
         {status}
       </div>
     </td>
   </tr>;
 };
+
 const EarningsPage = () => {
+  const [earningsCards, setEarningsCards] = useState([]);
+  const [invoiceHistory, setInvoiceHistory] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 1, limit: 4 });
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // 2. Thay đổi biến môi trường
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  // 4. Bọc hàm fetch trong useCallback và thêm backendUrl làm dependency
+  const fetchEarningsData = useCallback(async (page = 1) => {
+    if (!backendUrl) return; // Chờ backendUrl sẵn sàng
+
+    try {
+      // Logic localStorage giữ nguyên
+      const token = localStorage.getItem('adminToken');
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+
+      const statsRes = await axios.get(`${backendUrl}/api/admin/earnings-stats`, config);
+      if (statsRes.data.success) {
+        setEarningsCards(statsRes.data.data);
+      }
+
+      const historyRes = await axios.get(`${backendUrl}/api/admin/earnings-history?page=${page}&limit=4`, config);
+      if (historyRes.data.success) {
+        setInvoiceHistory(historyRes.data.data);
+        setPagination(historyRes.data.pagination);
+      }
+    } catch (error) {
+      console.error("Failed to fetch earnings:", error);
+    }
+  }, [backendUrl]); // Phụ thuộc vào backendUrl
+
+  useEffect(() => {
+    fetchEarningsData(currentPage);
+  }, [currentPage, fetchEarningsData]); // 5. Thêm fetchEarningsData vào dependency array
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > pagination.totalPages || page === currentPage) return;
+    setCurrentPage(page);
+  };
+
+  const renderPaginationItems = () => {
+    const items = [];
+    for (let i = 1; i <= pagination.totalPages; i++) {
+      items.push(
+        <li key={i} className={`page-item mb-0 ${currentPage === i ? 'active' : ''}`}>
+          <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); handlePageChange(i); }}>
+            {i}
+          </a>
+        </li>
+      );
+    }
+    return items;
+  };
+
   return <>
     <AdminLayout>
-      <div className='p-4'>
+      <PageMetaData title="Earning" />
+      <div>
         <Row className="mb-3">
           <Col xs={12}>
             <h1 className="h3 mb-0">Earnings</h1>
           </Col>
         </Row>
         <Row className="g-4 mb-4">
-          {earningsData.map((item, idx) => <EarningsFastCard key={idx} {...item} />)}
+          {earningsCards.map((item, idx) => <EarningsFastCard key={idx} {...item} />)}
         </Row>
         <Card className="bg-transparent border">
           <CardHeader className="bg-light border-bottom">
@@ -78,9 +149,6 @@ const EarningsPage = () => {
               <Table className="table-dark-gray align-middle p-4 mb-0 table-hover">
                 <thead>
                   <tr>
-                    <th scope="col" className="border-0 rounded-start">
-                      Invoice ID
-                    </th>
                     <th scope="col" className="border-0">
                       Course Name
                     </th>
@@ -99,38 +167,35 @@ const EarningsPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {billingHistoryData.map((item, idx) => <InvoiceHistoryCard key={idx} {...item} />)}
+                  {invoiceHistory.map((item, index) => (
+                    <InvoiceHistoryCard
+                      key={`${item._id}-${index}`}
+                      {...item}
+                    />
+                  ))}
                 </tbody>
               </Table>
             </div>
           </CardBody>
           <CardHeader className="bg-transparent">
             <div className="d-sm-flex justify-content-sm-between align-items-sm-center">
-              <p className="mb-0 text-center text-sm-start">Showing 1 to 8 of 20 entries</p>
+              <p className="mb-0 text-center text-sm-start">
+                Showing {pagination.total > 0 ? (pagination.page - 1) * pagination.limit + 1 : 0}
+                &nbsp;to {Math.min(pagination.page * pagination.limit, pagination.total)}
+                &nbsp;of {pagination.total} entries
+              </p>
               <nav className="d-flex justify-content-center mb-0" aria-label="navigation">
                 <ul className="pagination pagination-sm pagination-primary-soft d-inline-block d-md-flex rounded mb-0">
-                  <li className="page-item mb-0">
-                    <a className="page-link" href="#" tabIndex={-1}>
+                  <li className={`page-item mb-0 ${currentPage === 1 ? 'disabled' : ''}`}>
+                    <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); handlePageChange(currentPage - 1); }} tabIndex={-1}>
                       <FaAngleLeft />
                     </a>
                   </li>
-                  <li className="page-item mb-0">
-                    <a className="page-link" href="#">
-                      1
-                    </a>
-                  </li>
-                  <li className="page-item mb-0 active">
-                    <a className="page-link" href="#">
-                      2
-                    </a>
-                  </li>
-                  <li className="page-item mb-0">
-                    <a className="page-link" href="#">
-                      3
-                    </a>
-                  </li>
-                  <li className="page-item mb-0">
-                    <a className="page-link" href="#">
+
+                  {renderPaginationItems()}
+
+                  <li className={`page-item mb-0 ${currentPage === pagination.totalPages ? 'disabled' : ''}`}>
+                    <a className="page-link" href="#" onClick={(e) => { e.preventDefault(); handlePageChange(currentPage + 1); }}>
                       <FaAngleRight />
                     </a>
                   </li>
